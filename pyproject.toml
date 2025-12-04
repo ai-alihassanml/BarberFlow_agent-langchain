@@ -1,0 +1,23 @@
+[project]
+name = "barber-booking-agent"
+version = "0.1.0"
+description = "AI-powered CLI barber appointment booking agent"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "langchain-core>=0.3.15",
+    "langchain-google-genai>=2.0.0",
+    "langgraph>=0.2.45",
+    "google-generativeai>=0.8.3",
+    "motor>=3.6.0",
+    "pymongo>=4.9.1",
+    "pydantic>=2.9.2",
+    "pydantic-settings>=2.6.1",
+    "python-dotenv>=1.0.1",
+    "rich>=13.9.4",
+    "email-validator>=2.2.0",
+    "python-dateutil>=2.9.0.post0",
+    "SpeechRecognition>=3.10.4",
+    "pyttsx3>=2.90",
+    "pyaudio>=0.2.14",
+]
