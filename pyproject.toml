@@ -19,7 +19,15 @@ dependencies = [
     "python-dateutil>=2.9.0.post0",
     "SpeechRecognition>=3.10.4",
     "pyttsx3>=2.90",
-    "pyaudio>=0.2.14",
+    # `pyaudio` is optional and requires system PortAudio headers to build.
+    # It's removed from the core dependencies because many deployment
+    # environments (serverless / Vercel) cannot compile it. If you need
+    # microphone support locally, install the optional `audio` extra.
     "fastapi>=0.124.0",
     "uvicorn>=0.38.0",
+]
+
+[project.optional-dependencies]
+audio = [
+    "pyaudio>=0.2.14"
 ]

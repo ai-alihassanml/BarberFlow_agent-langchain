@@ -1,3 +1,48 @@
+# Barber Booking Agent
+
+## Development
+ - Install dependencies: `pip install -r requirements.txt` or use your preferred method
+
+### Optional: Local audio / microphone support
+This project previously listed `PyAudio` as a direct dependency. `PyAudio` requires the
+PortAudio native library and often needs a compiled wheel. Many deployment environments
+(for example Vercel serverless) cannot build it, which causes failures like the one
+in your screenshot: "Building wheel for pyaudio did not run successfully." To avoid
+deployment build failures, `PyAudio` is now an optional extra.
+
+If you need microphone or local audio capture on your development machine, install the
+optional `audio` extra or install `PyAudio` manually depending on your platform.
+
+- Windows (recommended):
+
+```powershell
+python -m pip install --upgrade pip
+python -m pip install pipwin
+pipwin install pyaudio
+```
+
+- macOS:
+
+```bash
+brew install portaudio
+pip install pyaudio
+- Debian/Ubuntu (Linux):
+
+```bash
+sudo apt-get update
+sudo apt-get install -y portaudio19-dev python3-dev
+pip install pyaudio
+```
+
+Or install the optional extra with your package tool if using `pyproject.toml`:
+
+```bash
+pip install .[audio]
+```
+
+If you're deploying to a serverless provider, prefer sending audio files to the API
+and using `SpeechRecognition`'s `AudioFile` or cloud transcription services (Google
+Speech-to-Text, OpenAI Whisper, etc.) instead of relying on `PyAudio` at runtime.
 # 💈 BarberFlow - AI Appointment Booking Agent
 
 BarberFlow is an intelligent, CLI-based barber appointment booking platform powered by **Google Gemini AI** and **LangGraph**. It allows users to book appointments, check availability, and manage bookings using natural language in a terminal interface.
