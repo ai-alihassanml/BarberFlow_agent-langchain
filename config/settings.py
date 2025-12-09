@@ -6,9 +6,13 @@ class Settings(BaseSettings):
     MONGODB_URI: str
     DATABASE_NAME: str = "barberflow"
     
+    # Groq LLM (OpenAI-compatible)
+    GROQ_API_KEY: str
+    GROQ_MODEL: str = "openai/gpt-oss-120b"
+    
     # Gemini AI
-    GEMINI_API_KEY: str
-    GEMINI_MODEL: str = "gemini-2.0-flash"
+    GEMINI_API_KEY: Optional[str]
+    GEMINI_MODEL: Optional[str] = "gemini-2.0-flash"
     
     # Application
     APP_NAME: str = "BarberFlow"

@@ -69,8 +69,16 @@ def root_fun():
 async def chat(request: ChatRequest):
     messages = build_langchain_messages(request.message, request.history)
     inputs = {"messages": messages}
-    result = await agent.ainvoke(inputs)
-    ai_message = result["messages"][-1].content
+    try:
+        result = await agent.ainvoke(inputs)
+    except Exception as exc:
+        raise HTTPException(status_code=502, detail=f"LLM call failed: {exc}") from exc
+    
+    try:
+        ai_message = result["messages"][-1].content
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail="Unexpected LLM response structure") from exc
+    
     return {"reply": ai_message}
 
 
@@ -81,29 +89,32 @@ async def chat_stream(request: ChatRequest):
     async def event_generator():
         inputs = {"messages": messages}
         full_message = ""
+        try:
+            async for event in agent.astream_events(inputs, version="v1"):
+                if event.get("event") == "on_chat_model_stream":
+                    chunk = event.get("data", {}).get("chunk")
+                    if chunk is None:
+                        continue
 
-        async for event in agent.astream_events(inputs, version="v1"):
-            if event.get("event") == "on_chat_model_stream":
-                chunk = event.get("data", {}).get("chunk")
-                if chunk is None:
-                    continue
+                    delta_text = ""
+                    content = getattr(chunk, "content", None)
 
-                delta_text = ""
-                content = getattr(chunk, "content", None)
+                    if isinstance(content, list):
+                        for part in content:
+                            text = getattr(part, "text", None)
+                            if text:
+                                delta_text += text
+                    elif isinstance(content, str):
+                        delta_text = content
 
-                if isinstance(content, list):
-                    for part in content:
-                        text = getattr(part, "text", None)
-                        if text:
-                            delta_text += text
-                elif isinstance(content, str):
-                    delta_text = content
+                    if not delta_text:
+                        continue
 
-                if not delta_text:
-                    continue
-
-                full_message += delta_text
-                yield json.dumps({"type": "token", "token": delta_text}) + "\n"
+                    full_message += delta_text
+                    yield json.dumps({"type": "token", "token": delta_text}) + "\n"
+        except Exception as exc:
+            yield json.dumps({"type": "error", "error": f"LLM stream failed: {exc}"}) + "\n"
+            return
 
         if full_message:
             yield json.dumps({"type": "complete", "message": full_message}) + "\n"
@@ -144,8 +155,15 @@ async def voice_chat(file: UploadFile = File(...)):
 
     messages = build_langchain_messages(transcript, [])
     inputs = {"messages": messages}
-    result = await agent.ainvoke(inputs)
-    ai_message = result["messages"][-1].content
+    try:
+        result = await agent.ainvoke(inputs)
+    except Exception as exc:
+        raise HTTPException(status_code=502, detail=f"LLM call failed: {exc}") from exc
+    
+    try:
+        ai_message = result["messages"][-1].content
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail="Unexpected LLM response structure") from exc
 
     return {"transcript": transcript, "reply": ai_message}
 

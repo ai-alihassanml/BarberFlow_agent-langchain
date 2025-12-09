@@ -6,9 +6,8 @@ readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
     "langchain-core>=0.3.15",
-    "langchain-google-genai>=2.0.0",
+    "langchain-openai>=0.2.0",
     "langgraph>=0.2.45",
-    "google-generativeai>=0.8.3",
     "motor>=3.6.0",
     "pymongo>=4.9.1",
     "pydantic>=2.9.2",
@@ -25,6 +24,7 @@ dependencies = [
     # microphone support locally, install the optional `audio` extra.
     "fastapi>=0.124.0",
     "uvicorn>=0.38.0",
+    "python-multipart>=0.0.20",
 ]
 
 [project.optional-dependencies]

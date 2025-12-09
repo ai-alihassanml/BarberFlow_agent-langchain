@@ -1,15 +1,16 @@
-from langchain_google_genai import ChatGoogleGenerativeAI
+from langchain_openai import ChatOpenAI
 from langchain_core.messages import SystemMessage
 from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
 from config.settings import settings
 from agent.states import AgentState
 from agent.tools import search_barbers, check_slots, book_appointment, my_appointments, check_specific_slot
 
-# Initialize Gemini
-llm = ChatGoogleGenerativeAI(
-    model=settings.GEMINI_MODEL,
-    google_api_key=settings.GEMINI_API_KEY,
-    temperature=0.2
+# Initialize Groq LLM via OpenAI-compatible endpoint
+llm = ChatOpenAI(
+    model=settings.GROQ_MODEL,
+    api_key=settings.GROQ_API_KEY,
+    base_url="https://api.groq.com/openai/v1",
+    temperature=0.2,
 )
 
 # Define tools list
