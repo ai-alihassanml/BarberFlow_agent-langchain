@@ -20,4 +20,6 @@ dependencies = [
     "SpeechRecognition>=3.10.4",
     "pyttsx3>=2.90",
     "pyaudio>=0.2.14",
+    "fastapi>=0.124.0",
+    "uvicorn>=0.38.0",
 ]
