@@ -79,8 +79,8 @@ async def chat(request: ChatRequest):
     messages = build_langchain_messages(request.message, request.history)
     inputs = {"messages": messages}
     try:
-        # Add timeout to prevent hanging (60 seconds should be enough for tool calls + response)
-        result = await asyncio.wait_for(agent.ainvoke(inputs), timeout=60.0)
+        # Add timeout to prevent hanging (90 seconds should be enough for tool calls + response)
+        result = await asyncio.wait_for(agent.ainvoke(inputs), timeout=90.0)
     except asyncio.TimeoutError:
         raise HTTPException(status_code=504, detail="Request timed out. The agent took too long to respond.")
     except Exception as exc:
@@ -91,14 +91,43 @@ async def chat(request: ChatRequest):
         ai_message = None
         for msg in reversed(result["messages"]):
             if isinstance(msg, AIMessage) and hasattr(msg, "content") and msg.content:
-                ai_message = msg.content
-                break
+                # Check if content is a string and not empty
+                content = msg.content
+                if isinstance(content, str) and content.strip():
+                    ai_message = content
+                    break
+                elif isinstance(content, list):
+                    # Handle case where content might be a list of content blocks
+                    text_parts = []
+                    for part in content:
+                        if hasattr(part, "text") and part.text:
+                            text_parts.append(part.text)
+                        elif isinstance(part, str):
+                            text_parts.append(part)
+                    if text_parts:
+                        ai_message = " ".join(text_parts)
+                        break
         
-        if ai_message is None:
+        if ai_message is None or not ai_message.strip():
             # Fallback: try to get content from last message anyway
             last_msg = result["messages"][-1]
             if hasattr(last_msg, "content"):
-                ai_message = last_msg.content or "I apologize, but I couldn't generate a response. Please try again."
+                content = last_msg.content
+                if isinstance(content, str) and content.strip():
+                    ai_message = content
+                elif isinstance(content, list):
+                    text_parts = []
+                    for part in content:
+                        if hasattr(part, "text") and part.text:
+                            text_parts.append(part.text)
+                        elif isinstance(part, str):
+                            text_parts.append(part)
+                    if text_parts:
+                        ai_message = " ".join(text_parts)
+                    else:
+                        ai_message = "I apologize, but I couldn't generate a response. Please try again."
+                else:
+                    ai_message = "I apologize, but I couldn't generate a response. Please try again."
             else:
                 ai_message = "I apologize, but I couldn't generate a response. Please try again."
     except Exception as exc:
@@ -199,7 +228,10 @@ async def voice_chat(
     messages = build_langchain_messages(transcript, history_messages)
     inputs = {"messages": messages}
     try:
-        result = await agent.ainvoke(inputs)
+        # Add timeout to prevent hanging (90 seconds should be enough for tool calls + response)
+        result = await asyncio.wait_for(agent.ainvoke(inputs), timeout=90.0)
+    except asyncio.TimeoutError:
+        raise HTTPException(status_code=504, detail="Request timed out. The agent took too long to respond.")
     except Exception as exc:
         raise HTTPException(status_code=502, detail=f"LLM call failed: {exc}") from exc
     
@@ -208,14 +240,43 @@ async def voice_chat(
         ai_message = None
         for msg in reversed(result["messages"]):
             if isinstance(msg, AIMessage) and hasattr(msg, "content") and msg.content:
-                ai_message = msg.content
-                break
+                # Check if content is a string and not empty
+                content = msg.content
+                if isinstance(content, str) and content.strip():
+                    ai_message = content
+                    break
+                elif isinstance(content, list):
+                    # Handle case where content might be a list of content blocks
+                    text_parts = []
+                    for part in content:
+                        if hasattr(part, "text") and part.text:
+                            text_parts.append(part.text)
+                        elif isinstance(part, str):
+                            text_parts.append(part)
+                    if text_parts:
+                        ai_message = " ".join(text_parts)
+                        break
         
-        if ai_message is None:
+        if ai_message is None or not ai_message.strip():
             # Fallback: try to get content from last message anyway
             last_msg = result["messages"][-1]
             if hasattr(last_msg, "content"):
-                ai_message = last_msg.content or "I apologize, but I couldn't generate a response. Please try again."
+                content = last_msg.content
+                if isinstance(content, str) and content.strip():
+                    ai_message = content
+                elif isinstance(content, list):
+                    text_parts = []
+                    for part in content:
+                        if hasattr(part, "text") and part.text:
+                            text_parts.append(part.text)
+                        elif isinstance(part, str):
+                            text_parts.append(part)
+                    if text_parts:
+                        ai_message = " ".join(text_parts)
+                    else:
+                        ai_message = "I apologize, but I couldn't generate a response. Please try again."
+                else:
+                    ai_message = "I apologize, but I couldn't generate a response. Please try again."
             else:
                 ai_message = "I apologize, but I couldn't generate a response. Please try again."
     except Exception as exc:
