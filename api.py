@@ -1,8 +1,8 @@
-from fastapi import FastAPI, UploadFile, File, HTTPException
+from fastapi import FastAPI, UploadFile, File, HTTPException, Form
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
-from typing import List, Literal
+from typing import List, Literal, Optional
 import asyncio
 import io
 import json
@@ -165,7 +165,10 @@ async def voice_transcribe(file: UploadFile = File(...)):
 
 
 @app.post("/voice/chat")
-async def voice_chat(file: UploadFile = File(...)):
+async def voice_chat(
+    file: UploadFile = File(...),
+    history: Optional[str] = Form(default=None),
+):
     raw = await file.read()
     recognizer = sr.Recognizer()
 
@@ -178,7 +181,22 @@ async def voice_chat(file: UploadFile = File(...)):
     except sr.RequestError as exc:
         raise HTTPException(status_code=502, detail=f"Speech recognition service error: {exc}")
 
-    messages = build_langchain_messages(transcript, [])
+    history_messages: List[ChatMessage] = []
+    if history:
+        try:
+            raw_history = json.loads(history)
+            if isinstance(raw_history, list):
+                for item in raw_history:
+                    if not isinstance(item, dict):
+                        continue
+                    role = item.get("role")
+                    content = item.get("content", "")
+                    if role in ("user", "assistant") and isinstance(content, str):
+                        history_messages.append(ChatMessage(role=role, content=content))
+        except json.JSONDecodeError:
+            history_messages = []
+
+    messages = build_langchain_messages(transcript, history_messages)
     inputs = {"messages": messages}
     try:
         result = await agent.ainvoke(inputs)
