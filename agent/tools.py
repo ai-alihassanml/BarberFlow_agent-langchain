@@ -149,24 +149,31 @@ async def book_appointment(
         }
     
     # Slot is available, create appointment
-    appt = Appointment(
-        customer_name=customer_name,
-        customer_email=customer_email,
-        customer_phone=customer_phone,
-        barber_id=barber_id,
-        barber_name=barber_name,
-        service_type=service_type,
-        appointment_datetime=dt,
-        duration_minutes=30 # Default
-    )
-    
-    appt_id = await create_appointment(appt)
-    return {
-        "success": True,
-        "appointment_id": appt_id,
-        "confirmation_number": appt_id,  # Explicit confirmation number field
-        "details": appt.model_dump()
-    }
+    try:
+        appt = Appointment(
+            customer_name=customer_name,
+            customer_email=customer_email,
+            customer_phone=customer_phone,
+            barber_id=barber_id,
+            barber_name=barber_name,
+            service_type=service_type,
+            appointment_datetime=dt,
+            duration_minutes=30 # Default
+        )
+        
+        appt_id = await create_appointment(appt)
+        return {
+            "success": True,
+            "appointment_id": appt_id,
+            "confirmation_number": appt_id,  # Explicit confirmation number field
+            "details": appt.model_dump()
+        }
+    except Exception as e:
+        return {
+            "success": False,
+            "error": f"Failed to create appointment: {str(e)}",
+            "appointment_id": None
+        }
 
 @tool
 async def check_specific_slot(barber_name_or_id: str, datetime_str: str) -> Dict:

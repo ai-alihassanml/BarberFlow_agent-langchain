@@ -8,7 +8,7 @@ import io
 import json
 
 import speech_recognition as sr
-from langchain_core.messages import HumanMessage, AIMessage
+from langchain_core.messages import HumanMessage, AIMessage, BaseMessage
 
 from config.database import connect_to_mongo, close_mongo_connection
 from services.seed_data import initialize_database
@@ -54,6 +54,15 @@ async def startup_event() -> None:
     await connect_to_mongo()
     await initialize_database()
 
+    async def _warmup_agent():
+        dummy_messages = [HumanMessage(content="Hello, this is a warmup request. Respond briefly.")]
+        try:
+            await agent.ainvoke({"messages": dummy_messages})
+        except Exception:
+            return
+
+    asyncio.create_task(_warmup_agent())
+
 
 @app.on_event("shutdown")
 async def shutdown_event() -> None:
@@ -70,14 +79,30 @@ async def chat(request: ChatRequest):
     messages = build_langchain_messages(request.message, request.history)
     inputs = {"messages": messages}
     try:
-        result = await agent.ainvoke(inputs)
+        # Add timeout to prevent hanging (60 seconds should be enough for tool calls + response)
+        result = await asyncio.wait_for(agent.ainvoke(inputs), timeout=60.0)
+    except asyncio.TimeoutError:
+        raise HTTPException(status_code=504, detail="Request timed out. The agent took too long to respond.")
     except Exception as exc:
         raise HTTPException(status_code=502, detail=f"LLM call failed: {exc}") from exc
     
     try:
-        ai_message = result["messages"][-1].content
+        # Find the last AIMessage in the result (not just the last message, which might be a ToolMessage)
+        ai_message = None
+        for msg in reversed(result["messages"]):
+            if isinstance(msg, AIMessage) and hasattr(msg, "content") and msg.content:
+                ai_message = msg.content
+                break
+        
+        if ai_message is None:
+            # Fallback: try to get content from last message anyway
+            last_msg = result["messages"][-1]
+            if hasattr(last_msg, "content"):
+                ai_message = last_msg.content or "I apologize, but I couldn't generate a response. Please try again."
+            else:
+                ai_message = "I apologize, but I couldn't generate a response. Please try again."
     except Exception as exc:
-        raise HTTPException(status_code=500, detail="Unexpected LLM response structure") from exc
+        raise HTTPException(status_code=500, detail=f"Unexpected LLM response structure: {exc}") from exc
     
     return {"reply": ai_message}
 
@@ -161,9 +186,22 @@ async def voice_chat(file: UploadFile = File(...)):
         raise HTTPException(status_code=502, detail=f"LLM call failed: {exc}") from exc
     
     try:
-        ai_message = result["messages"][-1].content
+        # Find the last AIMessage in the result (not just the last message, which might be a ToolMessage)
+        ai_message = None
+        for msg in reversed(result["messages"]):
+            if isinstance(msg, AIMessage) and hasattr(msg, "content") and msg.content:
+                ai_message = msg.content
+                break
+        
+        if ai_message is None:
+            # Fallback: try to get content from last message anyway
+            last_msg = result["messages"][-1]
+            if hasattr(last_msg, "content"):
+                ai_message = last_msg.content or "I apologize, but I couldn't generate a response. Please try again."
+            else:
+                ai_message = "I apologize, but I couldn't generate a response. Please try again."
     except Exception as exc:
-        raise HTTPException(status_code=500, detail="Unexpected LLM response structure") from exc
+        raise HTTPException(status_code=500, detail=f"Unexpected LLM response structure: {exc}") from exc
 
     return {"transcript": transcript, "reply": ai_message}
 
